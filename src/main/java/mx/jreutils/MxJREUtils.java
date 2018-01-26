@@ -11,10 +11,11 @@ import static mx.gwtutils.MxroGWTUtils.flip;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MxJREUtils {
 
-	// <!-- one.download https://u1.linnk.it/qc8sbw/usr/apps/textsync/docs/java-fragments-port-available -->
 	/**
 	 * Checks to see if a specific port is available.
 	 * 
@@ -54,11 +55,27 @@ public class MxJREUtils {
 		return false;
 	}
 
-	// <!-- one.end -->
+	private static Set<Integer> used = new HashSet<Integer>();
 
+	/**
+	 * <p>
+	 * Searches for the next available port starting with the defined start port.
+	 * <p>
+	 * This method also keeps track of ports that were used before and tries to
+	 * avoid using these again.
+	 * 
+	 * @param start
+	 * @return
+	 */
 	public static int nextAvailablePort(int start) {
-		while (!portAvailable(start)) {
-			start++;
+		synchronized (used) {
+			while (used.contains(start) || !portAvailable(start)) {
+				start++;
+			}
+			used.add(start);
+			if (used.size() > 10000) {
+				used.clear();
+			}
 		}
 		return start;
 	}
@@ -69,8 +86,8 @@ public class MxJREUtils {
 	 * 
 	 * <li>Default ports will not be made part of the path. eg.
 	 * http://www.mxro.de:80/test/test1.xml?page=1&parameter=space+1#home will
-	 * return de/mxro/www/http/test/test1.xml_page_1_parameter_space_1_home and
-	 * not de/mxro/www/http/<strong>80</strong>/test/test1.
+	 * return de/mxro/www/http/test/test1.xml_page_1_parameter_space_1_home and not
+	 * de/mxro/www/http/<strong>80</strong>/test/test1.
 	 * xml_page_1_parameter_space_1_home</li>
 	 * 
 	 * 
@@ -80,8 +97,7 @@ public class MxJREUtils {
 		try {
 			final URI uri = new URI(suri);
 
-			assert uri.isAbsolute() : "Cannot determine directory for node: URI must be absolute: <"
-					+ suri + ">";
+			assert uri.isAbsolute() : "Cannot determine directory for node: URI must be absolute: <" + suri + ">";
 
 			// example
 			// http://www.mxro.de:80/test/test1.xml?page=1&parameter=space+1#home
@@ -97,8 +113,8 @@ public class MxJREUtils {
 			final String query = uri.getQuery(); // eg <page=1>
 			final String fragment = uri.getFragment(); // eg <home>
 
-			assert !emptyOrNull(host) : "Cannot determine directory for node: host must be specified in URI: <"
-					+ suri + ">";
+			assert !emptyOrNull(host) : "Cannot determine directory for node: host must be specified in URI: <" + suri
+					+ ">";
 
 			final StringBuffer dir = new StringBuffer();
 
@@ -110,8 +126,7 @@ public class MxJREUtils {
 			if (!emptyOrNull(scheme))
 				dir.append(scheme + "/");
 
-			if (!emptyOrNull(port)
-					&& !(port.equals("80") && scheme.equals("http"))) {
+			if (!emptyOrNull(port) && !(port.equals("80") && scheme.equals("http"))) {
 				dir.append(port + "/");
 			}
 
@@ -120,9 +135,7 @@ public class MxJREUtils {
 			}
 
 			if (!emptyOrNull(query)) {
-				dir.append("_"
-						+ query.replaceAll("=", "_").replaceAll("&", "_")
-								.replaceAll("\\+", "_"));
+				dir.append("_" + query.replaceAll("=", "_").replaceAll("&", "_").replaceAll("\\+", "_"));
 			}
 
 			if (!emptyOrNull(fragment))
@@ -131,9 +144,7 @@ public class MxJREUtils {
 			return dir.toString();
 
 		} catch (final URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Cannot determine directory for node: no valid URI: <"
-							+ suri + ">");
+			throw new IllegalArgumentException("Cannot determine directory for node: no valid URI: <" + suri + ">");
 		}
 
 	}
